@@ -19,4 +19,14 @@ app.use('/api/map', require('./routes/map'));
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`ReWild API running on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`ReWild API running on :${PORT}`));
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Puerto ${PORT} en uso. Ejecuta esto en PowerShell y vuelve a intentar:\n`);
+    console.error(`   Stop-Process -Id (Get-NetTCPConnection -LocalPort ${PORT}).OwningProcess -Force\n`);
+    process.exit(1);
+  } else {
+    throw err;
+  }
+});

@@ -9,12 +9,27 @@ function headers() {
 }
 
 async function req(method, path, body) {
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: headers(),
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: headers(),
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch {
+    throw new Error('No se puede conectar al servidor. ¿Está el backend corriendo en :3001?');
+  }
+
+  const text = await res.text();
+  if (!text) throw new Error('El servidor no respondió. Revisa que el backend esté activo.');
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Respuesta inesperada del servidor (status ${res.status})`);
+  }
+
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }

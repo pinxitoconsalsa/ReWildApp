@@ -20,9 +20,9 @@ router.get('/projects/search', async (req, res) => {
   const projects = await prisma.mapProject.findMany({
     where: {
       OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { region: { contains: q, mode: 'insensitive' } },
-        { country: { contains: q, mode: 'insensitive' } },
+        { name: { contains: q } },
+        { region: { contains: q } },
+        { country: { contains: q } },
       ],
     },
   });
