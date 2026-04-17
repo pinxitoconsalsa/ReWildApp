@@ -22,7 +22,7 @@ app.use('/api/map', require('./routes/map'));
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3001;
-const server = app.listen(PORT, () => console.log(`ReWild API running on :${PORT}`));
+const server = app.listen(PORT, '0.0.0.0', () => console.log(`ReWild API running on :${PORT}`));
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
