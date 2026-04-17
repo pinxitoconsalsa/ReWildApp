@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+process.on('uncaughtException', (err) => { console.error('UNCAUGHT:', err); process.exit(1); });
+process.on('unhandledRejection', (err) => { console.error('UNHANDLED:', err); process.exit(1); });
+
 const app = express();
 app.use(cors());
 app.use(express.json());
