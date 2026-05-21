@@ -1,0 +1,9 @@
+{
+  "appId": "com.rewild.app",
+  "appName": "ReWild App",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}
