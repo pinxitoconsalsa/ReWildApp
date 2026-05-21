@@ -1,9 +1,7 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('../lib/achievements');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/learn/courses?category=Reforestacion
 router.get('/courses', async (req, res) => {

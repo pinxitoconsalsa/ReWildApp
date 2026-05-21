@@ -1,10 +1,8 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
 const { uploadToSupabase } = require('../lib/supabase-upload');
 const { supabase } = require('../lib/supabase');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // XP thresholds per rank
 const RANKS = [

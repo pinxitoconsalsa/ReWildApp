@@ -23,6 +23,7 @@ model User {
 
   trees           Tree[]
   posts           CommunityPost[]
+  postLikes       PostLike[]
   eventJoins      EventJoin[]
   nftCerts        NFTCertificate[]
   carbonLogs      CarbonCalcLog[]
@@ -109,6 +110,17 @@ model CommunityPost {
   comments    Int      @default(0)
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id])
+  postLikes   PostLike[]
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  post      CommunityPost @relation(fields: [postId], references: [id])
+  @@unique([userId, postId])
 }
 
 model Event {

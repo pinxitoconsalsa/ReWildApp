@@ -1,9 +1,7 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('../lib/achievements');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/events?category=Reforestacion
 router.get('/', async (req, res) => {
@@ -25,22 +23,39 @@ router.get('/', async (req, res) => {
 router.post('/:id/join', authMiddleware, async (req, res) => {
   const event = await prisma.event.findUnique({ where: { id: req.params.id } });
   if (!event) return res.status(404).json({ error: 'Event not found' });
-  if (event.joinedSpots >= event.totalSpots)
-    return res.status(409).json({ error: 'Event is full' });
 
-  const existing = await prisma.eventJoin.findUnique({
-    where: { userId_eventId: { userId: req.user.id, eventId: event.id } },
-  });
-  if (existing) return res.status(409).json({ error: 'Already joined' });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Verificar duplicado
+      const existing = await tx.eventJoin.findUnique({
+        where: { userId_eventId: { userId: req.user.id, eventId: event.id } },
+      });
+      if (existing) {
+        const err = new Error('Already joined'); err.code = 'ALREADY_JOINED'; throw err;
+      }
 
-  await prisma.$transaction([
-    prisma.eventJoin.create({ data: { userId: req.user.id, eventId: event.id } }),
-    prisma.event.update({ where: { id: event.id }, data: { joinedSpots: { increment: 1 } } }),
-    prisma.user.update({ where: { id: req.user.id }, data: { xp: { increment: 150 } } }),
-  ]);
+      // Incrementar solo si quedan spots (atomic compare-and-update)
+      const updated = await tx.event.updateMany({
+        where: { id: event.id, joinedSpots: { lt: event.totalSpots } },
+        data: { joinedSpots: { increment: 1 } },
+      });
 
-  checkAndUnlockAchievements(req.user.id).catch(console.error);
-  res.json({ message: 'Joined successfully' });
+      if (updated.count === 0) {
+        const err = new Error('Event is full'); err.code = 'EVENT_FULL'; throw err;
+      }
+
+      await tx.eventJoin.create({ data: { userId: req.user.id, eventId: event.id } });
+      await tx.user.update({ where: { id: req.user.id }, data: { xp: { increment: 150 } } });
+    });
+
+    checkAndUnlockAchievements(req.user.id).catch(console.error);
+    res.json({ message: 'Joined successfully' });
+  } catch (err) {
+    if (err.code === 'ALREADY_JOINED') return res.status(409).json({ error: 'Ya estás inscrito en este evento' });
+    if (err.code === 'EVENT_FULL')    return res.status(409).json({ error: 'El evento está completo' });
+    if (err.code === 'P2002')         return res.status(409).json({ error: 'Ya estás inscrito en este evento' });
+    res.status(500).json({ error: 'Error al unirse al evento' });
+  }
 });
 
 module.exports = router;

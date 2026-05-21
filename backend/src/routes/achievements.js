@@ -1,9 +1,7 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
 const { ACHIEVEMENTS, checkAndUnlockAchievements } = require('../lib/achievements');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/achievements — lista completa con estado desbloqueado para el usuario
 router.get('/', authMiddleware, async (req, res) => {

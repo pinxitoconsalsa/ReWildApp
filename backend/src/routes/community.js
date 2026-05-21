@@ -1,10 +1,8 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('../lib/achievements');
 const { uploadToSupabase } = require('../lib/supabase-upload');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 function timeAgo(date) {
   const secs = Math.floor((Date.now() - new Date(date)) / 1000);
@@ -32,6 +30,12 @@ router.get('/feed', async (req, res) => {
 router.post('/posts', authMiddleware, async (req, res) => {
   const { content, category, title, imageBase64 } = req.body;
   if (!content) return res.status(400).json({ error: 'content required' });
+  if (typeof content !== 'string' || content.length > 2000) {
+    return res.status(400).json({ error: 'content debe tener máximo 2000 caracteres' });
+  }
+  if (title && (typeof title !== 'string' || title.length > 150)) {
+    return res.status(400).json({ error: 'title debe tener máximo 150 caracteres' });
+  }
 
   let imageUrl = null;
 
@@ -62,13 +66,37 @@ router.post('/posts', authMiddleware, async (req, res) => {
   res.status(201).json(post);
 });
 
-// POST /api/community/posts/:id/like
+// POST /api/community/posts/:id/like  (toggle: like / unlike)
 router.post('/posts/:id/like', authMiddleware, async (req, res) => {
-  const post = await prisma.communityPost.update({
-    where: { id: req.params.id },
-    data: { likes: { increment: 1 } },
-  });
-  res.json({ likes: post.likes });
+  const postId = req.params.id;
+  const userId = req.user.id;
+
+  try {
+    const existing = await prisma.postLike.findUnique({
+      where: { userId_postId: { userId, postId } },
+    });
+
+    if (existing) {
+      // Usuario ya dio like → quitar like
+      await prisma.$transaction([
+        prisma.postLike.delete({ where: { userId_postId: { userId, postId } } }),
+        prisma.communityPost.update({ where: { id: postId }, data: { likes: { decrement: 1 } } }),
+      ]);
+      const post = await prisma.communityPost.findUnique({ where: { id: postId }, select: { likes: true } });
+      return res.json({ likes: post.likes, liked: false });
+    }
+
+    // Dar like por primera vez
+    await prisma.$transaction([
+      prisma.postLike.create({ data: { userId, postId } }),
+      prisma.communityPost.update({ where: { id: postId }, data: { likes: { increment: 1 } } }),
+    ]);
+    const post = await prisma.communityPost.findUnique({ where: { id: postId }, select: { likes: true } });
+    res.json({ likes: post.likes, liked: true });
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Post no encontrado' });
+    res.status(500).json({ error: 'Error al procesar like' });
+  }
 });
 
 module.exports = router;

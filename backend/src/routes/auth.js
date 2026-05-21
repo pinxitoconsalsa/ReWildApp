@@ -1,11 +1,18 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const rateLimit = require('express-rate-limit');
 const { supabase } = require('../lib/supabase');
+const prisma = require('../lib/prisma');
 
-const prisma = new PrismaClient();
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera 15 minutos.' },
+});
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   const { email, password, name, bio } = req.body;
   if (!email || !password || !name)
     return res.status(400).json({ error: 'email, password, name required' });
@@ -45,7 +52,7 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -69,7 +76,8 @@ router.post('/login', async (req, res) => {
       user: { id: user.id, email: user.email, name: user.name, rank: user.rank, xp: user.xp },
     });
   } catch (err) {
-    res.status(401).json({ error: err.message });
+    console.error('Login error:', err.message);
+    res.status(401).json({ error: 'Credenciales inválidas' });
   }
 });
 
@@ -85,7 +93,8 @@ router.post('/refresh', async (req, res) => {
     if (error) throw error;
     res.json({ session: data.session });
   } catch (err) {
-    res.status(401).json({ error: err.message });
+    console.error('Refresh error:', err.message);
+    res.status(401).json({ error: 'Token de refresco inválido o expirado' });
   }
 });
 

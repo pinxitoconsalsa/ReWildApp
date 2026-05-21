@@ -1,10 +1,9 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const authMiddleware = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('../lib/achievements');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/nft/my
 router.get('/my', authMiddleware, async (req, res) => {
@@ -28,9 +27,11 @@ router.post('/mint', authMiddleware, async (req, res) => {
   const existing = await prisma.nFTCertificate.findUnique({ where: { treeId } });
   if (existing) return res.status(409).json({ error: 'Already minted' });
 
-  const prefix = tree.scientificName.slice(0, 3).toUpperCase();
-  const tokenId = `${prefix}-${String(Date.now()).slice(-3)}-${tree.name.slice(0, 4).toUpperCase()}`;
-  const txHash = '0x' + uuidv4().replace(/-/g, '');
+  // tokenId: prefijo especie + UUID corto → garantía de unicidad
+  const prefix = tree.scientificName.replace(/\s+/g, '').slice(0, 4).toUpperCase();
+  const tokenId = `${prefix}-${uuidv4().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
+  // txHash: hash simulado basado en treeId (determinista, no real blockchain)
+  const txHash = '0x' + crypto.createHash('sha256').update(tree.id + Date.now()).digest('hex').slice(0, 40);
 
   const cert = await prisma.nFTCertificate.create({
     data: {
