@@ -78,6 +78,20 @@ export default function Dashboard() {
     );
   }
 
+  if (!progress) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-3 p-6">
+        <p className="text-slate-500 text-center">No se pudo cargar tu perfil.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
   const { rank, nextRank, xp, xpToNext, progressPct, metrics } = progress;
   const categoryLabels = {
     Reforestacion: '🌳 Reforestación',

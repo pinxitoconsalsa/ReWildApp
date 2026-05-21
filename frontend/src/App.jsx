@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
 
 import Onboarding from './screens/Onboarding';
+import ResetPassword from './screens/ResetPassword';
+import Welcome from './screens/Welcome';
 import Dashboard from './screens/Dashboard';
 import Aprende from './screens/Aprende';
 import Comunidad from './screens/Comunidad';
@@ -28,11 +30,13 @@ export default function App() {
         <BrowserRouter>
           <Routes>
           <Route path="/" element={<Onboarding />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/app"
             element={<PrivateRoute><Layout /></PrivateRoute>}
           >
             <Route index element={<Navigate to="/app/dashboard" replace />} />
+            <Route path="welcome"      element={<Welcome />} />
             <Route path="dashboard"    element={<Dashboard />} />
             <Route path="aprende"      element={<Aprende />} />
             <Route path="comunidad"    element={<Comunidad />} />
